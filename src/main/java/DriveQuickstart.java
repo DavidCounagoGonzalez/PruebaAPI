@@ -28,10 +28,7 @@ import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
 import java.util.List;
@@ -49,8 +46,8 @@ public class DriveQuickstart {
      * Global instance of the scopes required by this quickstart.
      * If modifying these scopes, delete your previously saved tokens/ folder.
      */
-    private static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE_METADATA_READONLY);
-    private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
+    private static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE);
+    private static final String CREDENTIALS_FILE_PATH = "credentials.json";
 
     /**
      * Creates an authorized Credential object.
@@ -73,7 +70,7 @@ public class DriveQuickstart {
                 .setAccessType("offline")
                 .build();
         LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
-        Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("499177653486-jksoafmc35b2bo5tipk30iotef46vvh4.apps.googleusercontent.com");
+        Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("499177653486-th25ahgh4e11nbt4abbsio42mqvbjj07.apps.googleusercontent.com");
         //returns an authorized Credential object.
         return credential;
     }
@@ -85,22 +82,40 @@ public class DriveQuickstart {
                 .setApplicationName(APPLICATION_NAME)
                 .build();
 
-        // Print the names and IDs for up to 10 files.
         FileList result = service.files().list()
-                .setQ("mimeType='image/jpeg' or mimeType='application/pdf'")
-                .setPageSize(10)
+                .setQ("name contains 'imagenesBot' and mimeType = 'application/vnd.google-apps.folder'")
+                .setPageSize(100)
+                .setSpaces("drive")
                 .setFields("nextPageToken, files(id, name)")
                 .execute();
         List<File> files = result.getFiles();
+
         if (files == null || files.isEmpty()) {
             System.out.println("No files found.");
         } else {
+            String dirImagenes = null;
             System.out.println("Files:");
             for (File file : files) {
                 System.out.printf("%s (%s)\n", file.getName(), file.getId());
+                dirImagenes = file.getId();
+            }
+            // busco la imagen en el directorio
+            FileList resultImagenes = service.files().list()
+                    .setQ("name contains 'kirbyCono' and parents in '"+dirImagenes+"'")
+                    .setSpaces("drive")
+                    .setFields("nextPageToken, files(id, name)")
+                    .execute();
+            List<File> filesImagenes = resultImagenes.getFiles();
+            for (File file : filesImagenes) {
+                System.out.printf("Imagen: %s\n", file.getName());
+                // guardamos el 'stream' en el fichero aux.jpeg tiene que existir
+                OutputStream outputStream = new FileOutputStream("D:/david/Documents/imagenesB/your_aux.jpeg");
+                service.files().get(file.getId())
+                        .executeMediaAndDownloadTo(outputStream);
+                outputStream.flush();
+                outputStream.close();
             }
         }
-
     }
 }
 // [END drive_quickstart]
